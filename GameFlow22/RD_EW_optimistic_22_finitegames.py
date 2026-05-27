@@ -16,6 +16,8 @@ WHAT IT DOES
 5. Discrete time          FTRL+   with entropic  regularizer (exponential weights) in extra-gradient variant (not optimistic, two vector queries per step)
 6. Discrete time adaptive FTRL+   with entropic  regularizer (exponential weights) in template variant (convex combo of extra-gradient and optimistic)
 
+7. continuous time symplectic FTRL with entropic regularizer
+
 # TO DO
 
 - #TO-DO-EUCLIDEAN-CONTINUOUS-ANCHOR
@@ -65,7 +67,7 @@ PULLED_REPLICATOR_COLOR = 'gray'
 SYMPLECTIC_REPLICATOR_COLOR = 'crimson'
 PAYFIELD_COLOR = 'crimson'
 
-VANILLA_COLOR = 'purple'
+VANILLA_COLOR = "red" # (0.2, 0.2, 0.702)
 EXTRA_COLOR = 'red'
 ADA_EXTRA_COLOR = 'white'
 
@@ -74,7 +76,9 @@ EUCLIDEAN_COLOR = 'crimson'
 POTENTIAL_FUNCTION_COLOR = 'red'
 
 NE_COLOR = 'crimson'
-INITIAL_POINT_COLOR = 'purple'
+
+# INITIAL_POINT_COLOR = 'purple'
+INITIAL_POINT_COLOR = (0.2, 0.2, 0.702)
 
 
 
@@ -87,19 +91,21 @@ PULLED_CONTINUOUS_TIME_LABEL = 'Pulled FTRL-D'
 SYMPLECTIC_CONTINUOUS_TIME_LABEL = 'Symplectic FTRL-D'
 EXTRAPOLATION_LABEL = 'FTRL+'
 ADA_EXTRAPOLATION_LABEL = 'AdaFTRL+'
-VANILLA_LABEL = 'vanilla FTRL discrete'
+# VANILLA_LABEL = 'vanilla FTRL discrete'
+VANILLA_LABEL = 'Vanilla FTRL'
 PAYOFF_FIELD_LABEL = 'Payoff field'
 
-ENTROPIC_LABEL = ' (entropic)'
+ENTROPIC_LABEL = ' (entropic regularization)'
 EUCLIDEAN_LABEL = ' (euclidean)'
 
 # NE_LABEL = "Strategic center"
 NE_LABEL = "NE"
 
-INCLUDE_LEGEND = 1
+INCLUDE_LEGEND = 1 #ANCHOR-2026-04-08
 INCLUDE_AXES_LABELS = 1
 INCLUDE_TITLE = 1
-AXES_LABEL_FONT_SIZE = 15
+AXES_LABEL_FONT_SIZE = 14
+TITLE_FONT_SIZE = 20
 
 # ------------------------------------------------
 ## Contours
@@ -108,7 +114,7 @@ PLOT_CONTOURS = 1 # Global contours switch
 
 
 # game type must not be potential to plot contours, can'r remember why... fix this
-PLOT_CONTOURS_FIRST_PLAYER = 1
+PLOT_CONTOURS_FIRST_PLAYER = 0
 PLOT_CONTOURS_SECOND_PLAYER = 0
 
 PLOT_CONTOURS_POTENTIAL_FUNCTION = 0
@@ -125,7 +131,7 @@ FILLED_CONTOUR_DENSITY = 100 # number of filled contour levels, higher = smoothe
 # ------------------------------------------------
 QUIVER_PAYFIELD = 0
 QUIVER_INDIVIDUAL_PAYFIELD = 0
-QUIVER_RD = 1
+QUIVER_RD = 0
 
 QUIVER_SCALE = 7 # Scaling for quiver plots; high number = short arrow RD is scaled by this number, payfield is scaled by this number SQUARED
 
@@ -142,7 +148,13 @@ PLOT_SEGMENT_PERPENDICULAR_HARMONIC_CENTER = 0
 SOLVE_ODE = 1
 PLOT_CONTINUOUS_RD = 1
 
-PLOT_CONTINUOUS_SYMPLECTIC_RD = 1
+PLOT_SYMPLECTIC_RD = 0
+
+if PLOT_SYMPLECTIC_RD:
+    print("Manually switch on inverse computation in symplecticFTRL class and turn this off")
+    raise(Exception)
+    
+
 SYMPLECTIC_RD_PARAMETER = -0.1 # If 0, vanilla FTRL
 
 PLOT_CONTINUOUS_PULLED_RD = 0 # Vanilla FTRL (no symplectic nor optimistic correction), but running on unsharped pull-back of V rather than sharped. Geometrically less consistent, let's see what happens. cf SymplecticFTRL22
@@ -180,10 +192,10 @@ FEEDBACK_TYPE = "mixed_vector"                                                  
 # FEEDBACK_TYPE = "pure_vector"
 # FEEDBACK_TYPE = "bandit"
 
-VANILLA_LABEL += f', {FEEDBACK_TYPE} feedback'
+# VANILLA_LABEL += f', {FEEDBACK_TYPE} feedback'
 
 # entropic
-PLOT_ENTROPIC_VANILLA_FTRL = 0
+PLOT_ENTROPIC_VANILLA_FTRL = 0  #ANCHOR-2026-04-08
 
 PLOT_EXTRA_FTRL = 0
 EXTRA_FTRL_LINEWIDTH = 1.5
@@ -205,25 +217,34 @@ PLOT_EUCLIDEAN_VANILLA_FTRL = 0
 
 # TIMESTEPS_EXTRA_FTRL = 25000
 TIMESTEPS_EXTRA_FTRL = 1000
-TIMESTEPS_VANILLA_FTRL = 1000
+TIMESTEPS_VANILLA_FTRL = 10000
 
 
 # ------------------------------------------------
 ## Nash equilibria
 # ------------------------------------------------
-PLOT_NE = 1
+PLOT_NE = 1  #ANCHOR-2026-04-08
 
 
 # ------------------------------------------------
 ## Response graph
 # ------------------------------------------------
-DRAW_ORIENTED_EDGES = True # to draw arrow along edges of responde graph
-ANNOTE_DEVIATION_VALUE = 1 # True to write on edges value of unilateral deviations
+DRAW_ORIENTED_EDGES = 1  # to draw arrow along edges of responde graph #ANCHOR-2026-04-08
+ANNOTE_DEVIATION_VALUE = 1 # True to write on edges value of unilateral deviations  #ANCHOR-2026-04-08
 PURE_LABELS_CORNERS = 1 # Add label to pure strategies (which pure, payoff, potential if available)
+
+FULL_PURE_LABELS_CORNERS = 1
+ONLY_POTENTIAL_PURE_LABELS_CORNERS = 0
+
+# mutually exclusive
+assert ONLY_POTENTIAL_PURE_LABELS_CORNERS == (not FULL_PURE_LABELS_CORNERS )
+
+
+
 PURE_LABELS_CORNERS_MIXED = 1 # Label mixed value of pure strategies
 
-DEVIATION_FONT_SIZE = 30
-PURES_FONT_SIZE = 20
+DEVIATION_FONT_SIZE = 25
+PURES_FONT_SIZE = 18
 
 
 
@@ -875,10 +896,14 @@ class Game22():
         # Quiver replicator field
         if QUIVER_RD:
             ax.quiver(Y1, Y2, *RD, scale = scale, color = REPLICATOR_COLOR, width=0.003, headlength=3)
+
+            if not PLOT_CONTINUOUS_RD: 
+                legend_elements.extend([matplotlib.lines.Line2D([0], [0], color= REPLICATOR_COLOR, label = CONTINUOUS_TIME_LABEL)])
         
         # Quiver payoff field
         if QUIVER_PAYFIELD:
             ax.quiver(Y1, Y2, *ED, scale = scale * scale, color =  PAYFIELD_COLOR, width=0.005, headlength=4)
+            legend_elements.extend([matplotlib.lines.Line2D([0], [0], color= PAYFIELD_COLOR, label = PAYOFF_FIELD_LABEL)])
 
         if QUIVER_PAYFIELD and QUIVER_INDIVIDUAL_PAYFIELD:
 
@@ -896,7 +921,7 @@ class Game22():
         # payoff_field_label = 'Payoff field'
         #payoff_field_label = 'Payoff'
         # legend_elements = [ ]
-            legend_elements =  [matplotlib.lines.Line2D([0], [0], color= PAYFIELD_COLOR, label = PAYOFF_FIELD_LABEL)] 
+        
 
 
         # extra gradient entropic ftrl
@@ -905,7 +930,7 @@ class Game22():
             # pick an initial point
             initial_point = np.array([ y1[1], y2[3] ])
             print(f'Initial point of extra ftrl: {initial_point}')
-            plt.scatter(*initial_point, color = INITIAL_POINT_COLOR, s = 20)
+            plt.scatter(*initial_point, color = EXTRA_COLOR, s = 20)
             EGMD = self.extra_ftrl( initial_point, TIMESTEPS_EXTRA_FTRL, EXTRA_FTRL_STEP_SIZE )
             # nash_x, nash_y = EGMD[0][-1], EGMD[1][-1]
 
@@ -917,10 +942,13 @@ class Game22():
         if PLOT_ADA_EXTRA_FTRL:
 
             # pick an initial point
-            initial_point = np.array([ y1[-1], y2[-2] ])
-            print(f'Initial point of extra ftrl: {initial_point}')
-            plt.scatter(*initial_point, color = INITIAL_POINT_COLOR, s = 20)
+            initial_point = np.array([ y1[1:-1][-1], y2[1:-1][-2] ])
+            print(f'Initial point of extra ftrl: {initial_point}') # initial point of lead seuence; not day-to-day, played one
+            # plt.scatter(*initial_point, color = ADA_EXTRA_COLOR, s = 20)
             ADA_EXTRA_FTRL = self.adaFTRLplus(initial_point, TIMESTEPS_EXTRA_FTRL, eta_1 = np.ones(2), v_half = np.zeros(2), coef = ADA_FTRL_COEF  )
+
+            initial_ada = np.array([ADA_EXTRA_FTRL[0][0], ADA_EXTRA_FTRL[1][0]]) # initial point of day-to-day, played sequence
+            plt.scatter(*initial_ada, color = ADA_EXTRA_COLOR, s = 20)
             # nash_x, nash_y = ADA_EXTRA_FTRL[0][-1], ADA_EXTRA_FTRL[1][-1]
 
             plt.plot(*ADA_EXTRA_FTRL, color = ADA_EXTRA_COLOR,  linewidth = EXTRA_FTRL_LINEWIDTH, label = ADA_EXTRAPOLATION_LABEL + ENTROPIC_LABEL, zorder = 100)
@@ -929,8 +957,8 @@ class Game22():
 
         # vanilla entropic ftrl
         if PLOT_ENTROPIC_VANILLA_FTRL:
-            initial_points = [np.array([ y1[1], y2[3] ])]
-            # initial_points = [np.random.rand(2)]
+            initial_points = [np.array([ y1[1], y2[3] ])]  #ANCHOR-2026-04-08
+            # initial_points = [np.random.rand(2) for _ in range(6)] 
             # initial_points = [ [a,b] for a in y1[1:-1] for b in y2[1:-1] ]
 
             # print(f'Initial point of entropic vanilla ftrl: {initial_point}')
@@ -941,7 +969,7 @@ class Game22():
 
             for initial_point in initial_points[1:]:
                 # print(f'Initial point of entropic vanilla ftrl: {initial_point}')
-                # plt.scatter(*initial_point, color = INITIAL_POINT_COLOR, s = 20)
+                plt.scatter(*initial_point, color = INITIAL_POINT_COLOR, s = 20)
                 vanilla_entropic_ftrl_trajectory = self.vanilla_entropic_ftrl( initial_point, TIMESTEPS_VANILLA_FTRL, VANILLA_FTRL_STEPSIZE )
                 plt.plot(*vanilla_entropic_ftrl_trajectory, color = VANILLA_COLOR, linewidth = 0.7, label = VANILLA_LABEL + ENTROPIC_LABEL)
                 # legend_elements.extend( [matplotlib.lines.Line2D([0], [0], color = VANILLA_COLOR, label = VANILLA_LABEL  + ENTROPIC_LABEL)]  )
@@ -959,10 +987,13 @@ class Game22():
             plt.plot(*EUCLIDEAN_MIRROR_DESCENT, color = EUCLIDEAN_COLOR,  linewidth = 0.7, label = VANILLA_LABEL + EUCLIDEAN_LABEL)
             legend_elements.extend( [matplotlib.lines.Line2D([0], [0], color = EUCLIDEAN_COLOR, label = VANILLA_LABEL + EUCLIDEAN_LABEL )]  )
 
-        return legend_elements, y1, y2,  list([ ADA_EXTRA_FTRL[0][0], ADA_EXTRA_FTRL[1][0] ])
+        if PLOT_ADA_EXTRA_FTRL:
+            return legend_elements, y1, y2,  list([ ADA_EXTRA_FTRL[0][0], ADA_EXTRA_FTRL[1][0] ])
+        else:
+            return legend_elements, y1, y2
 
 
-    def ode_plot(self, ax, ada_initial_point):
+    def ode_plot(self, ax, ada_initial_point ):
 
         legend_elements = []
 
@@ -987,9 +1018,9 @@ class Game22():
         # Starting points for ODE trajectories (primal, notation y is unhappy)
         y1 = y1_range
         y2 = y2_range
-        start = [ [a,b] for a in y1[1:-1] for b in y2[1:-1] ]
+        # start = [ [a,b] for a in y1[1:-1] for b in y2[1:-1] ]
 
-        # start = [ [y1[ INDEX_1 ],y2[INDEX_2]]  ]
+        start = [ [y1[ INDEX_1 ],y2[INDEX_2]]  ]
 
         # Replicator
         if PLOT_CONTINUOUS_RD:
@@ -999,7 +1030,7 @@ class Game22():
             legend_elements.extend( [ matplotlib.lines.Line2D([0], [0], color = REPLICATOR_COLOR, label = CONTINUOUS_TIME_LABEL + ENTROPIC_LABEL ) ])
 
         # Replicator symplectic
-        if PLOT_CONTINUOUS_SYMPLECTIC_RD:
+        if PLOT_SYMPLECTIC_RD:
 
             primal_initial_points = start[0:3]
 
@@ -1033,9 +1064,10 @@ class Game22():
         legend_elements = []
 
         if PLOT_NE:
+            legend_elements.extend( [matplotlib.lines.Line2D([0], [0], color = NE_COLOR, label = NE_LABEL, linestyle = '', marker = 'o' )] )
             try:
                 plt.scatter(self.interior_ne[0], self.interior_ne[1], color = NE_COLOR, zorder=10, s = 60) # zorder is like z-index in css, higher plots this point on top of other graphical elements. Need high else the contourfill and the extra FTRL cover it
-                legend_elements.extend( [matplotlib.lines.Line2D([0], [0], color = NE_COLOR, label = NE_LABEL, linestyle = '', marker = 'o' )] )
+                
 
             except:
                 pass
@@ -1046,8 +1078,15 @@ class Game22():
 
 
         ADA_INITIAL_POINT = [ ]
-        if QUIVER_PAYFIELD or QUIVER_RD:
-            legend_elements_quiver, GRID_1, GRID_2, ADA_INITIAL_POINT = self.quiver_RD_plot(ax)
+        if QUIVER_PAYFIELD or QUIVER_RD or PLOT_ENTROPIC_VANILLA_FTRL or PLOT_ADA_EXTRA_FTRL or PLOT_EXTRA_FTRL :
+
+            if PLOT_ADA_EXTRA_FTRL:
+                legend_elements_quiver, GRID_1, GRID_2, ADA_INITIAL_POINT = self.quiver_RD_plot(ax)
+
+            else:
+                legend_elements_quiver, GRID_1, GRID_2 = self.quiver_RD_plot(ax)
+                
+            
             legend_elements.extend(legend_elements_quiver)
 
         if SOLVE_ODE:
@@ -1057,8 +1096,13 @@ class Game22():
         if INCLUDE_AXES_LABELS:
             # ax.set_xlabel(f'Prob. player 1 assigns to {self.strategies_labels[0][1]} in {{{self.strategies_labels[0][0]}, {self.strategies_labels[0][1]}}}', fontsize=AXES_LABEL_FONT_SIZE)
             # ax.set_ylabel(f'Prob. player 2 assigns to {self.strategies_labels[1][1]} in {{{self.strategies_labels[1][0]}, {self.strategies_labels[1][1]}}}', fontsize=AXES_LABEL_FONT_SIZE)
-            ax.set_xlabel("Player 1's strategy", fontsize=AXES_LABEL_FONT_SIZE)
-            ax.set_ylabel("Player 2's strategy", fontsize=AXES_LABEL_FONT_SIZE)
+
+            # ax.set_xlabel("Player 1's strategy", fontsize=AXES_LABEL_FONT_SIZE)
+            # ax.set_ylabel("Player 2's strategy", fontsize=AXES_LABEL_FONT_SIZE)
+
+            ax.set_xlabel("Player 1 controls x", fontsize=AXES_LABEL_FONT_SIZE)
+            ax.set_ylabel("Player 2 controls y", fontsize=AXES_LABEL_FONT_SIZE)
+            ax.yaxis.set_label_coords(-0.01,0.7)
 
 
         # ax.set_title(f'Shahshahani vs. Euclidean individual gradient ascent \n $2 \\times 2$ {self.game_name} - {self.game_type}', fontsize = '9')
@@ -1073,7 +1117,7 @@ class Game22():
 
         if INCLUDE_TITLE:
             full_plot_title = self.game_name
-            ax.set_title(full_plot_title, fontsize = '12')
+            ax.set_title(full_plot_title, fontsize = TITLE_FONT_SIZE)
 
         # Boundaries of [0,1] x [0,1]
         # ax.plot([0,0], [0,1], color = 'k', linewidth = 0.5)
@@ -1082,8 +1126,7 @@ class Game22():
         # ax.plot([0,1], [1,1], color = 'k', linewidth = 0.5)
 
 
-        if INCLUDE_LEGEND:
-            ax.legend(handles=legend_elements, loc='upper left', fontsize = 10)
+
 
 
 
@@ -1106,7 +1149,8 @@ class Game22():
         [ [a10, a11], [a20, a21]] = self.strategies_labels
 
         # Here manage position of pures labels
-        shift = 0.05
+        x_shift =  0.002
+        y_shift =  0.06
 
         # Add labels to the corners
         if PURE_LABELS_CORNERS:
@@ -1127,10 +1171,10 @@ class Game22():
                 plt.gca().set_yticks([])
 
             if self.is_potential:
-                pot_top_left = f", $\\phi$ = {self.pure_potential_function[0][1]}"
-                pot_top_right = f", $\\phi$ = {self.pure_potential_function[1][1]}"
-                pot_bottom_left = f", $\\phi$ = {self.pure_potential_function[0][0]}"
-                pot_bottom_right = f", $\\phi$ = {self.pure_potential_function[1][0]}"
+                pot_top_left = f"$\\phi$ = {self.pure_potential_function[0][1]}"
+                pot_top_right = f"$\\phi$ = {self.pure_potential_function[1][1]}"
+                pot_bottom_left = f"$\\phi$ = {self.pure_potential_function[0][0]}"
+                pot_bottom_right = f"$\\phi$ = {self.pure_potential_function[1][0]}"
             else:
                 pot_top_left = ""
                 pot_top_right = ""
@@ -1140,11 +1184,21 @@ class Game22():
 
 
 
-            # do include mixed values of pure strategies
-            plt.text(x_min - 3 * shift, y_max + 1.5 * shift,   f'({a10},{a21}) {mixed_top_left}: u = ({self.u_pure[1][0][1]}, {self.u_pure[2][0][1]}){pot_top_left}', verticalalignment='top',    horizontalalignment='left',    fontsize = PURES_FONT_SIZE)
-            plt.text(x_max + 3 * shift, y_max + 1.5 * shift,   f'({a11},{a21}) {mixed_top_right}: u = ({self.u_pure[1][1][1]}, {self.u_pure[2][1][1]}){pot_top_right}', verticalalignment='top',    horizontalalignment='right',   fontsize = PURES_FONT_SIZE)
-            plt.text(x_min - 3 * shift, y_min - 1.5 * shift,   f'({a10},{a20}) {mixed_bottom_left}: u = ({self.u_pure[1][0][0]}, {self.u_pure[2][0][0]}){pot_bottom_left}', verticalalignment='bottom', horizontalalignment='left',     fontsize = PURES_FONT_SIZE)
-            plt.text(x_max + 3 * shift, y_min - 1.5 * shift,   f'({a11},{a20}) {mixed_bottom_right}: u = ({self.u_pure[1][1][0]}, {self.u_pure[2][1][0]}){pot_bottom_right}', verticalalignment='bottom', horizontalalignment='right',    fontsize = PURES_FONT_SIZE)
+            if FULL_PURE_LABELS_CORNERS:
+                # do include mixed values of pure strategies
+                plt.text(x_min - 3 * x_shift, y_max + 1.5 * y_shift,   f'({a10},{a21}) {mixed_top_left}: u = ({self.u_pure[1][0][1]}, {self.u_pure[2][0][1]}), {pot_top_left}', verticalalignment='top',    horizontalalignment='left',    fontsize = PURES_FONT_SIZE)
+                plt.text(x_max + 3 * x_shift, y_max + 1.5 * y_shift,   f'({a11},{a21}) {mixed_top_right}: u = ({self.u_pure[1][1][1]}, {self.u_pure[2][1][1]}), {pot_top_right}', verticalalignment='top',    horizontalalignment='right',   fontsize = PURES_FONT_SIZE)
+                plt.text(x_min - 3 * x_shift, y_min - 1.5 * y_shift,   f'({a10},{a20}) {mixed_bottom_left}: u = ({self.u_pure[1][0][0]}, {self.u_pure[2][0][0]}), {pot_bottom_left}', verticalalignment='bottom', horizontalalignment='left',     fontsize = PURES_FONT_SIZE)
+                plt.text(x_max + 3 * x_shift, y_min - 1.5 * y_shift,   f'({a11},{a20}) {mixed_bottom_right}: u = ({self.u_pure[1][1][0]}, {self.u_pure[2][1][0]}), {pot_bottom_right}', verticalalignment='bottom', horizontalalignment='right',    fontsize = PURES_FONT_SIZE)
+
+
+
+            if ONLY_POTENTIAL_PURE_LABELS_CORNERS:
+                # only potential
+                plt.text(x_min - 3 * x_shift, y_max + 1.5 * y_shift,   f'{pot_top_left}', verticalalignment='top',    horizontalalignment='left',    fontsize = PURES_FONT_SIZE)
+                plt.text(x_max + 3 * x_shift, y_max + 1.5 * y_shift,   f'{pot_top_right}', verticalalignment='top',    horizontalalignment='right',   fontsize = PURES_FONT_SIZE)
+                plt.text(x_min - 3 * x_shift, y_min - 1.5 * y_shift,   f'{pot_bottom_left}', verticalalignment='bottom', horizontalalignment='left',     fontsize = PURES_FONT_SIZE)
+                plt.text(x_max + 3 * x_shift, y_min - 1.5 * y_shift,   f'{pot_bottom_right}', verticalalignment='bottom', horizontalalignment='right',    fontsize = PURES_FONT_SIZE)
 
 
                 
@@ -1192,7 +1246,8 @@ class Game22():
         if DRAW_ORIENTED_EDGES: plt.annotate('', xy=(x_max, y_min), xytext=(x_min, y_min), arrowprops=dict(arrowstyle = arr + arr_style, lw=3))
         # deviation value
         # if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_min-5*shift, f"bottom = {abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
-        if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_min-2*shift, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_min-2*y_shift, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        else: plt.text(x_max / 2, y_min-2*y_shift, f"{abs(deviation)}", color = 'white', fontsize = DEVIATION_FONT_SIZE) # nasty trick for spacing
 
         # -------------------------------------------------------------------------
         # Top border
@@ -1210,8 +1265,9 @@ class Game22():
         # arrow
         if DRAW_ORIENTED_EDGES: plt.annotate('', xy=(x_max, y_max), xytext=(x_min, y_max),arrowprops=dict(arrowstyle = arr + arr_style, lw=3))
         # deviation value
-        #if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_max + 1.5*shift, f"top = {abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
-        if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_max + 1.5*shift, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        #if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_max + 1.5*y_shift, f"top = {abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        if ANNOTE_DEVIATION_VALUE: plt.text(x_max / 2, y_max + 1.5*y_shift, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        else:  plt.text(x_max / 2, y_max + 1.5*y_shift, f"{abs(deviation)}", color = 'white', fontsize = DEVIATION_FONT_SIZE) # nasty trick for spacing
 
         # -------------------------------------------------------------------------
         # Right border
@@ -1235,7 +1291,8 @@ class Game22():
         # if ANNOTE_DEVIATION_VALUE: plt.text(x_max + 1.5*shift , y_max / 2, f"right = {abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
 
         # only number
-        if ANNOTE_DEVIATION_VALUE: plt.text(x_max + 1.5*shift , y_max / 2, abs(deviation ), color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        if ANNOTE_DEVIATION_VALUE: plt.text(x_max + 1.5*x_shift , y_max / 2, abs(deviation ), color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        else: plt.text(x_max + 1.5*x_shift , y_max / 2, abs(deviation ), color = 'white', fontsize = DEVIATION_FONT_SIZE) # nasty trick for spacing
 
         # Fix number of digits
         # fixed_digits_deviation = f"{abs(deviation):.3f}"
@@ -1259,7 +1316,8 @@ class Game22():
         if DRAW_ORIENTED_EDGES: plt.annotate('', xy=(x_min, y_max), xytext=(x_min, y_min), arrowprops=dict(arrowstyle = arr + arr_style, lw=3))
         # deviation value
         # if ANNOTE_DEVIATION_VALUE: plt.text(x_min - 11*shift, y_max / 2, f"left = {abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
-        if ANNOTE_DEVIATION_VALUE: plt.text(x_min - 3*shift, y_max / 2, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        if ANNOTE_DEVIATION_VALUE: plt.text(x_min - 20*x_shift, y_max / 2, f"{abs(deviation)}", color = 'red', fontsize = DEVIATION_FONT_SIZE)
+        else: plt.text(x_min - 20*x_shift, y_max / 2, f"{abs(deviation)}", color = 'white', fontsize = DEVIATION_FONT_SIZE, zorder = -10) # nasty trick for spacing
 
 
         # -------------------------------------------------------------------------
@@ -1297,10 +1355,15 @@ class Game22():
             for ne in self.pure_loose_NE:
                 plt.scatter(ne[0], ne[1], edgecolor = NE_COLOR, facecolor = 'none', zorder=10, s = 400, linewidths = 2)
 
+            # legend_elements.extend( [matplotlib.lines.Line2D([0], [0], color = NE_COLOR, label = NE_LABEL, linestyle = '', marker = 'o' )] )
+
 
         # Hard coded removed axes ticks labels
         plt.gca().set_xticks([])
         plt.gca().set_yticks([])
+
+        if INCLUDE_LEGEND:
+            ax.legend(handles=legend_elements, loc='lower right', fontsize = 10)
 
         # -------------------------------------------------------------------------
         ## Harmonic: print "perpendicular" vector from center
@@ -1379,7 +1442,7 @@ class Game22():
 # payoff = [-1, -4, -3, -1, 1, 2, 2, -2] 
 
 # mathing pennies
-payoff = [3, -3, -3, 3, -3, 3, 3, -3]
+# payoff = [3, -3, -3, 3, -3, 3, 3, -3]
 
 # prisoner's dilemma
 # payoff = [2, 0, 3, 1, 2, 3, 0, 1]
@@ -1573,12 +1636,64 @@ pot_BB = 0
 # u = [-2, -8, 3, -8, 5, 9, 1, 10]
 # G = Game22(u, 'sha', game_type = '',  game_name = 'Eff JV skew', strategies_labels = [ ['A', 'B'], ['C', 'D'] ] )
 
+## ------------------------------------------------
+## 2026-04-07 zero-sum and potential for Lausanne
+## ------------------------------------------------
 
+#ANCHOR-2026-04-08
+
+
+
+## ------------------------------------------------
+
+# # potential common interest
+# payoff = [1, 2, 0, 1, 1, 2, 0, 1]
+
+# # potential zero-sum
+# payoff = [1, 0, 0, -1, -1, 0, 0, 1]
+
+
+# harmonic
+# payoff = [1, 0, 0, 1, -1, 0, 0, -1]
+
+## ------------------------------------------------
+
+# # potential function
+# pot = [1, 2, 0, 1]
+
+## ------------------------------------------------
 
 ## ------------------------------------------------
 ## Generic game instance
 ## ------------------------------------------------
-G = Game22(payoff, 'sha', game_type = '',  game_name = 'Matching Pennies: Vanilla FTRL-D, Symplectic FTRL-D, and AdaFTRL+', pure_potential_function = 0, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+# G = Game22(payoff, 'sha', game_type = '',  game_name = 'Matching Pennies: Vanilla FTRL-D, Symplectic FTRL-D, and AdaFTRL+', pure_potential_function = 0, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+
+# G = Game22(payoff, 'sha', game_type = 'potential',  game_name = 'Potential', pure_potential_function = pot, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+# G = Game22(payoff, 'sha', game_type = 'potential',  game_name = 'Zero-sum?', pure_potential_function = pot, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+# G = Game22(payoff, 'sha', game_type = '',  game_name = 'Zero-sum and Harmonic', pure_potential_function = 0, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+
+## ------------------------------------------------
+## Two-player zero-sum
+## ------------------------------------------------
+# alpha = 2
+# beta = -2
+# gamma = -3
+# delta = 4
+
+# print(f"""Manual NE of two-player zero-sum : {
+#     (beta - alpha) / (- alpha + beta + gamma - delta),
+#     (alpha - gamma) / (alpha - beta - gamma + delta)
+#     }""")
+
+# payoff = [alpha, beta, gamma, delta, -alpha, -beta, -gamma, -delta]
+# G = Game22(payoff, 'sha', game_type = '',  game_name = 'Test', pure_potential_function = 0, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
+
+## ------------------------------------------------
+## Playing with note by Pedro Velasco 2026-05-22
+
+# payoff = [ 4, 0, 3, 2, 4, 6, 6, 4 ]
+payoff = [ 2, 0, 1, 2, 4, 6, 6, 4 ]
+G = Game22(payoff, 'sha', game_type = '',  game_name = 'harmonic', pure_potential_function = 0, strategies_labels = [ ['L', 'R'], ['B', 'T'] ] ) 
 
 
 # --------------------------------------------------------
@@ -1621,25 +1736,37 @@ G.full_plot(axs)
 # --------------------------------------------------------
 ## Save methods
 # --------------------------------------------------------
-SAVE = 1
+SAVE = 0
 
 if SAVE:
     root = './Results/'
 
     game_directory = f'{root}/{time.strftime("%Y-%m-%d")}-{G.game_name}'
+    # game_directory = f"/Users/davidelegacci/RESEARCH/phd/phd-research/phd-personal-writing/talks_slides/17_interview_SYCAMORE_march_26/Figures/{G.game_name}"
+
     current_directory = f'{game_directory}/{time.strftime("%Y-%m-%d-%H-%M-%S")}'
 
-    aspera.utils.make_folder(current_directory)
-    plt.savefig(f'{current_directory}/{G.game_name}.pdf', bbox_inches='tight')#, pad_inches = 0)
-    aspera.utils.write_to_txt(f'{current_directory}/{G.game_name}.txt', G.payoff)
-    aspera.utils.write_to_txt(f'{current_directory}/{G.game_name}.txt', G.return_NE_info())
-    # Save this self file for config parameters
-    with open(__file__, 'r') as source_file:
-        content = source_file.read()
+    # current_directory = "/Users/davidelegacci/RESEARCH/phd/phd-research/phd-personal-writing/talks_slides/17_interview_SYCAMORE_march_26/Figures"
+    now = time.strftime("%Y-%m-%d-%H-%M-%S")
 
-    # Write the content to config.py
-    with open(f'{current_directory}/config.py', 'w') as target_file:
-        target_file.write(content)
+
+
+    aspera.utils.make_folder(current_directory)
+    # plt.savefig(f'{current_directory}/{G.game_name}.pdf', bbox_inches='tight')#, pad_inches = 0)
+    plt.savefig(f'{current_directory}/{G.game_name}-{now}.pdf', bbox_inches='tight')#, pad_inches = 0)
+
+    # # Works fine; save details routine; switch on
+
+    # aspera.utils.write_to_txt(f'{current_directory}/{G.game_name}.txt', G.payoff)
+    # aspera.utils.write_to_txt(f'{current_directory}/{G.game_name}.txt', G.return_NE_info())
+
+    # # Save this self file for config parameters
+    # with open(__file__, 'r') as source_file:
+    #     content = source_file.read()
+
+    # # Write the content to config.py
+    # with open(f'{current_directory}/config.py', 'w') as target_file:
+    #     target_file.write(content)
 
 
 
